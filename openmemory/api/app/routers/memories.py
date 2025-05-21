@@ -306,14 +306,14 @@ async def create_memory(
     
     # Attempt to add to Qdrant with the same ID we just created
     try:
-        # Try to add with our specific ID
+        # Try to add with our specific user_id
         memory_client.add(
             request.text,
-            memory_id=str(memory_id),  # Specify the ID
             user_id=request.user_id,
             metadata={
                 "source_app": "openmemory",
                 "mcp_client": request.app,
+                "memory_id": str(memory_id),  # Include the ID in metadata instead
             }
         )
     except Exception as e:

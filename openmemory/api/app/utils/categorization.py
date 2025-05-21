@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 from openai import OpenAI
 from typing import List
@@ -10,7 +11,15 @@ from app.utils.prompts import MEMORY_CATEGORIZATION_PROMPT
 
 load_dotenv()
 
-openai_client = OpenAI()
+# Get API key and base URL from environment variables
+api_key = os.getenv("OPENAI_API_KEY", "dummy-key")
+api_base = os.getenv("OPENAI_API_BASE")
+
+# Initialize OpenAI client with explicit API key and base URL
+openai_client = OpenAI(
+    api_key=api_key,
+    base_url=api_base
+)
 
 
 class MemoryCategories(BaseModel):
