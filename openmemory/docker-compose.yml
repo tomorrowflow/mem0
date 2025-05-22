@@ -19,7 +19,11 @@ services:
     volumes:
       - ./api:/usr/src/openmemory
     command: >
-      sh -c "uvicorn main:app --host 0.0.0.0 --port 8765 --reload --workers 4"
+      sh -c "echo '=== OPENMEMORY-MCP ENVIRONMENT VARIABLES ===' &&
+      echo 'LLM_PROVIDER=$LLM_PROVIDER' &&
+      echo 'OLLAMA_API_BASE=$OLLAMA_API_BASE' &&
+      echo 'OLLAMA_MODEL=$OLLAMA_MODEL' &&
+      uvicorn main:app --host 0.0.0.0 --port 8765 --reload --workers 4"
   openmemory-ui:
     build:
       context: ui/

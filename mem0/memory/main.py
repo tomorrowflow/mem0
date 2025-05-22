@@ -400,19 +400,19 @@ class Memory(MemoryBase):
                         returned_memories.append({"id": memory_id, "memory": action_text, "event": event_type})
                     elif event_type == "UPDATE":
                         self._update_memory(
-                            memory_id=temp_uuid_mapping[resp.get("id")],
+                            memory_id=temp_uuid_mapping.get(resp.get("id")),
                             data=action_text,
                             existing_embeddings=new_message_embeddings,
                             metadata=deepcopy(metadata),
                         )
                         returned_memories.append({
-                            "id": temp_uuid_mapping[resp.get("id")], "memory": action_text, 
+                            "id": temp_uuid_mapping.get(resp.get("id")), "memory": action_text,
                             "event": event_type, "previous_memory": resp.get("old_memory"),
                         })
                     elif event_type == "DELETE":
-                        self._delete_memory(memory_id=temp_uuid_mapping[resp.get("id")])
+                        self._delete_memory(memory_id=temp_uuid_mapping.get(resp.get("id")))
                         returned_memories.append({
-                            "id": temp_uuid_mapping[resp.get("id")], "memory": action_text,
+                            "id": temp_uuid_mapping.get(resp.get("id")), "memory": action_text,
                             "event": event_type,
                         })
                     elif event_type == "NONE":
@@ -1206,13 +1206,13 @@ class AsyncMemory(MemoryBase):
                         memory_tasks.append((task, resp, "ADD", None))
                     elif event_type == "UPDATE":
                         task = asyncio.create_task(self._update_memory(
-                            memory_id=temp_uuid_mapping[resp["id"]], data=action_text,
+                            memory_id=temp_uuid_mapping.get(resp["id"]), data=action_text,
                             existing_embeddings=new_message_embeddings, metadata=deepcopy(metadata)
                         ))
-                        memory_tasks.append((task, resp, "UPDATE", temp_uuid_mapping[resp["id"]]))
+                        memory_tasks.append((task, resp, "UPDATE", temp_uuid_mapping.get(resp["id"])))
                     elif event_type == "DELETE":
-                        task = asyncio.create_task(self._delete_memory(memory_id=temp_uuid_mapping[resp.get("id")]))
-                        memory_tasks.append((task, resp, "DELETE", temp_uuid_mapping[resp.get("id")]))
+                        task = asyncio.create_task(self._delete_memory(memory_id=temp_uuid_mapping.get(resp.get("id"))))
+                        memory_tasks.append((task, resp, "DELETE", temp_uuid_mapping.get(resp.get("id"))))
                     elif event_type == "NONE":
                         logging.info("NOOP for Memory (async).")
                 except Exception as e:
