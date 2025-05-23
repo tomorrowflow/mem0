@@ -1,6 +1,29 @@
+import logging
+import os
 from typing import Any, ClassVar, Dict, Optional
 
 from pydantic import BaseModel, Field, model_validator
+
+
+def get_default_ollama_embedding_dims() -> int:
+    """Get default embedding dimensions from environment variable or fallback to 1536."""
+    dim_env_var = os.getenv("OLLAMA_EMBEDDING_DIMENSION")
+    logging.warning(f"get_default_ollama_embedding_dims: OLLAMA_EMBEDDING_DIMENSION env var value: {dim_env_var}")
+    
+    if dim_env_var is not None:
+        try:
+            logging.error(f"Using OLLAMA_EMBEDDING_DIMENSION ('{dim_env_var}') to create vector stores.")
+            final_dim = int(dim_env_var)
+            logging.warning(f"get_default_ollama_embedding_dims: Returning dimension value: {final_dim}")
+            return final_dim
+        except ValueError:
+            # If the environment variable is set but not a valid integer, fallback to default
+            logging.error(f"OLLAMA_EMBEDDING_DIMENSION ('{dim_env_var}') is set but not a valid integer. Falling back to default dimension 1536.")
+            pass
+    
+    final_dim = 1536
+    logging.warning(f"get_default_ollama_embedding_dims: Returning default dimension value: {final_dim}")
+    return final_dim
 
 
 class QdrantConfig(BaseModel):
@@ -9,7 +32,7 @@ class QdrantConfig(BaseModel):
     QdrantClient: ClassVar[type] = QdrantClient
 
     collection_name: str = Field("mem0", description="Name of the collection")
-    embedding_model_dims: Optional[int] = Field(1536, description="Dimensions of the embedding model")
+    embedding_model_dims: Optional[int] = Field(default_factory=get_default_ollama_embedding_dims, description="Dimensions of the embedding model. Defaults to OLLAMA_EMBEDDING_DIMENSION env var or 1536.")
     client: Optional[QdrantClient] = Field(None, description="Existing Qdrant client instance")
     host: Optional[str] = Field(None, description="Host address for Qdrant server")
     port: Optional[int] = Field(None, description="Port for Qdrant server")

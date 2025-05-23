@@ -1,6 +1,8 @@
 import json
+import logging
 import os
 import uuid
+from mem0.configs.vector_stores.qdrant import get_default_ollama_embedding_dims
 
 # Set up the directory path
 VECTOR_ID = str(uuid.uuid4())
@@ -34,23 +36,29 @@ def get_user_id():
 
 def get_or_create_user_id(vector_store):
     """Store user_id in vector store and return it."""
+    logging.error("get_or_create_user_id called")
     user_id = get_user_id()
 
+    logging.error(f"get_or_create_user_id: Checking for user_id {user_id}")
     # Try to get existing user_id from vector store
     try:
-        existing = vector_store.get(vector_id=user_id)
-        if existing and hasattr(existing, "payload") and existing.payload and "user_id" in existing.payload:
-            return existing.payload["user_id"]
+        user_id_exists = vector_store.get_by_id(user_id)
+        if user_id_exists:
+            logging.error(f"get_or_create_user_id: user_id {user_id} found, returning.")
+            return user_id
     except Exception:
         pass
 
     # If we get here, we need to insert the user_id
+    logging.error("get_or_create_user_id: user_id not found, attempting to insert.")
     try:
-        dims = getattr(vector_store, "embedding_model_dims", 1536)
+        dims = getattr(vector_store, "embedding_model_dims", get_default_ollama_embedding_dims())
+        logging.error(f"get_or_create_user_id: Calculated dims for insertion: {dims}")
+        logging.error(f"get_or_create_user_id: Attempting vector_store.insert for user_id {user_id} with dims {dims}")
         vector_store.insert(
             vectors=[[0.1] * dims], payloads=[{"user_id": user_id, "type": "user_identity"}], ids=[user_id]
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logging.error(f"get_or_create_user_id: Exception during insert: {e}")
 
     return user_id

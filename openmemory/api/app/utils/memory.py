@@ -94,7 +94,7 @@ def get_memory_client(custom_instructions: Optional[str] = None):
                     "provider": "ollama",
                     "config": {
                         "model": os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"),
-                        "embedding_dims": os.getenv("OLLAMA_EMBEDDING_DIMENSION", 768),
+                        "embedding_dims": int(os.getenv("OLLAMA_EMBEDDING_DIMENSION", "768")),
                         "ollama_base_url": ollama_api_base
                     }
                 }

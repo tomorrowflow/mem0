@@ -120,8 +120,27 @@ class Memory(MemoryBase):
             self.config.embedder.config,
             self.config.vector_store.config,
         )
+        
+        # Update vector store config with embedder dimensions for Qdrant
+        vector_store_config = self.config.vector_store.config
+        
+        # Log embedding model config details before Qdrant check
+        logging.error(f"Mem0Main: Embedding model config type: {type(self.embedding_model.config)}")
+        logging.error(f"Mem0Main: Embedding model config value: {self.embedding_model.config}")
+        logging.error(f"Mem0Main: hasattr(self.embedding_model, 'config'): {hasattr(self.embedding_model, 'config')}")
+        if hasattr(self.embedding_model, 'config'):
+            logging.error(f"Mem0Main: hasattr(self.embedding_model.config, 'embedding_dims'): {hasattr(self.embedding_model.config, 'embedding_dims')}")
+            if hasattr(self.embedding_model.config, 'embedding_dims'):
+                logging.error(f"Mem0Main: self.embedding_model.config.embedding_dims value: {self.embedding_model.config.embedding_dims}")
+        
+        if self.config.vector_store.provider == "qdrant" and hasattr(self.embedding_model, 'config') and hasattr(self.embedding_model.config, 'embedding_dims'):
+            vector_store_config.embedding_model_dims = self.embedding_model.config.embedding_dims
+            logging.error(f"Mem0Main: Set vector_store_config.embedding_model_dims to: {vector_store_config.embedding_model_dims}")
+        else:
+            logging.error(f"Mem0Main: Final vector_store_config.embedding_model_dims value: {getattr(vector_store_config, 'embedding_model_dims', 'NOT_SET')}")
+            
         self.vector_store = VectorStoreFactory.create(
-            self.config.vector_store.provider, self.config.vector_store.config
+            self.config.vector_store.provider, vector_store_config
         )
         self.llm = LlmFactory.create(self.config.llm.provider, self.config.llm.config)
         self.db = SQLiteManager(self.config.history_db_path)
@@ -145,8 +164,17 @@ class Memory(MemoryBase):
             provider_path = f"migrations_{self.config.vector_store.provider}"
             self.config.vector_store.config.path = os.path.join(mem0_dir, provider_path)
             os.makedirs(self.config.vector_store.config.path, exist_ok=True)
+            
+        # Update telemetry vector store config with embedder dimensions for Qdrant
+        telemetry_vector_store_config = self.config.vector_store.config
+        if self.config.vector_store.provider == "qdrant" and hasattr(self.embedding_model, 'config') and hasattr(self.embedding_model.config, 'embedding_dims'):
+            telemetry_vector_store_config.embedding_model_dims = self.embedding_model.config.embedding_dims
+            logging.error(f"Mem0Main: Set telemetry_vector_store_config.embedding_model_dims to: {telemetry_vector_store_config.embedding_model_dims}")
+        else:
+            logging.error(f"Mem0Main: Final telemetry_vector_store_config.embedding_model_dims value: {getattr(telemetry_vector_store_config, 'embedding_model_dims', 'NOT_SET')}")
+            
         self._telemetry_vector_store = VectorStoreFactory.create(
-            self.config.vector_store.provider, self.config.vector_store.config
+            self.config.vector_store.provider, telemetry_vector_store_config
         )
         capture_event("mem0.init", self, {"sync_type": "sync"})
 
@@ -399,16 +427,27 @@ class Memory(MemoryBase):
                         )
                         returned_memories.append({"id": memory_id, "memory": action_text, "event": event_type})
                     elif event_type == "UPDATE":
-                        self._update_memory(
-                            memory_id=temp_uuid_mapping.get(resp.get("id")),
-                            data=action_text,
-                            existing_embeddings=new_message_embeddings,
-                            metadata=deepcopy(metadata),
-                        )
-                        returned_memories.append({
-                            "id": temp_uuid_mapping.get(resp.get("id")), "memory": action_text,
-                            "event": event_type, "previous_memory": resp.get("old_memory"),
-                        })
+                        memory_id = temp_uuid_mapping.get(resp.get("id"))
+                        if memory_id is None:
+                            logging.warning(f"Cannot update memory with ID {resp.get('id')} - memory not found. Converting to ADD operation.")
+                            # Convert to ADD operation instead
+                            created_memory_id = self._create_memory(
+                                data=action_text,
+                                existing_embeddings=new_message_embeddings,
+                                metadata=deepcopy(metadata),
+                            )
+                            returned_memories.append({"id": created_memory_id, "memory": action_text, "event": "ADD"})
+                        else:
+                            self._update_memory(
+                                memory_id=memory_id,
+                                data=action_text,
+                                existing_embeddings=new_message_embeddings,
+                                metadata=deepcopy(metadata),
+                            )
+                            returned_memories.append({
+                                "id": memory_id, "memory": action_text,
+                                "event": event_type, "previous_memory": resp.get("old_memory"),
+                            })
                     elif event_type == "DELETE":
                         self._delete_memory(memory_id=temp_uuid_mapping.get(resp.get("id")))
                         returned_memories.append({
@@ -961,8 +1000,27 @@ class AsyncMemory(MemoryBase):
             self.config.embedder.config,
             self.config.vector_store.config,
         )
+        
+        # Update vector store config with embedder dimensions for Qdrant
+        vector_store_config = self.config.vector_store.config
+        
+        # Log embedding model config details before Qdrant check (AsyncMemory)
+        logging.error(f"AsyncMem0Main: Embedding model config type: {type(self.embedding_model.config)}")
+        logging.error(f"AsyncMem0Main: Embedding model config value: {self.embedding_model.config}")
+        logging.error(f"AsyncMem0Main: hasattr(self.embedding_model, 'config'): {hasattr(self.embedding_model, 'config')}")
+        if hasattr(self.embedding_model, 'config'):
+            logging.error(f"AsyncMem0Main: hasattr(self.embedding_model.config, 'embedding_dims'): {hasattr(self.embedding_model.config, 'embedding_dims')}")
+            if hasattr(self.embedding_model.config, 'embedding_dims'):
+                logging.error(f"AsyncMem0Main: self.embedding_model.config.embedding_dims value: {self.embedding_model.config.embedding_dims}")
+        
+        if self.config.vector_store.provider == "qdrant" and hasattr(self.embedding_model, 'config') and hasattr(self.embedding_model.config, 'embedding_dims'):
+            vector_store_config.embedding_model_dims = self.embedding_model.config.embedding_dims
+            logging.error(f"AsyncMem0Main: Set vector_store_config.embedding_model_dims to: {vector_store_config.embedding_model_dims}")
+        else:
+            logging.error(f"AsyncMem0Main: Final vector_store_config.embedding_model_dims value: {getattr(vector_store_config, 'embedding_model_dims', 'NOT_SET')}")
+            
         self.vector_store = VectorStoreFactory.create(
-            self.config.vector_store.provider, self.config.vector_store.config
+            self.config.vector_store.provider, vector_store_config
         )
         self.llm = LlmFactory.create(self.config.llm.provider, self.config.llm.config)
         self.db = SQLiteManager(self.config.history_db_path)
@@ -1205,11 +1263,21 @@ class AsyncMemory(MemoryBase):
                         ))
                         memory_tasks.append((task, resp, "ADD", None))
                     elif event_type == "UPDATE":
-                        task = asyncio.create_task(self._update_memory(
-                            memory_id=temp_uuid_mapping.get(resp["id"]), data=action_text,
-                            existing_embeddings=new_message_embeddings, metadata=deepcopy(metadata)
-                        ))
-                        memory_tasks.append((task, resp, "UPDATE", temp_uuid_mapping.get(resp["id"])))
+                        memory_id = temp_uuid_mapping.get(resp.get("id"))
+                        if memory_id is None:
+                            logging.warning(f"Cannot update memory with ID {resp.get('id')} - memory not found. Converting to ADD operation.")
+                            # Convert to ADD operation instead
+                            task = asyncio.create_task(self._create_memory(
+                                data=action_text, existing_embeddings=new_message_embeddings,
+                                metadata=deepcopy(metadata)
+                            ))
+                            memory_tasks.append((task, resp, "ADD", None))
+                        else:
+                            task = asyncio.create_task(self._update_memory(
+                                memory_id=memory_id, data=action_text,
+                                existing_embeddings=new_message_embeddings, metadata=deepcopy(metadata)
+                            ))
+                            memory_tasks.append((task, resp, "UPDATE", memory_id))
                     elif event_type == "DELETE":
                         task = asyncio.create_task(self._delete_memory(memory_id=temp_uuid_mapping.get(resp.get("id"))))
                         memory_tasks.append((task, resp, "DELETE", temp_uuid_mapping.get(resp.get("id"))))

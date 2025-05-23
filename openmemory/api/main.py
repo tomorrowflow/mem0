@@ -1,5 +1,10 @@
 import datetime
+import logging
 from fastapi import FastAPI
+
+# Configure logging for debugging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.warning("############ TEST LOG FROM APP STARTUP ############")
 from app.database import engine, Base, SessionLocal
 from app.mcp_server import setup_mcp_server
 from app.routers import memories_router, apps_router, stats_router
